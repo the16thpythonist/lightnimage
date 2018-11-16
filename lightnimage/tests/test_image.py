@@ -50,7 +50,7 @@ class TestLightningImage(TestCase):
         lightning_image = LightningImage(self.sum_array)
 
         row_sum = lightning_image.row_sum()
-        self.assertListEqual([1, 3], list(row_sum))
+        self.assertListEqual([2, 2], list(row_sum))
 
     def test_image_row_sum_scaling_works(self):
         """
@@ -62,7 +62,7 @@ class TestLightningImage(TestCase):
         row_sum = lightning_image.row_sum(scale=1)
         # Here we need to test each element separately because the elements are float and we obviously cannot
         # hard-compare two floats & there is no "ListAlmostEqual" Assertion
-        self.assertAlmostEqual(0.333, row_sum[0], 2)
+        self.assertAlmostEqual(1.0, row_sum[0], 2)
         self.assertAlmostEqual(1.0, row_sum[1], 2)
 
     def test_image_column_sum_is_calculated_correctly(self):
@@ -73,7 +73,7 @@ class TestLightningImage(TestCase):
         lightning_image = LightningImage(self.sum_array)
 
         column_sum = lightning_image.column_sum()
-        self.assertListEqual([2, 2], list(column_sum))
+        self.assertListEqual([1, 3], list(column_sum))
 
     def test_image_column_sum_scaling_works(self):
         """
@@ -85,6 +85,6 @@ class TestLightningImage(TestCase):
         column_sum = lightning_image.column_sum(scale=1)
         # Here we need to test each element separately because the elements are float and we obviously cannot
         # hard-compare two floats & there is no "ListAlmostEqual" Assertion
-        self.assertAlmostEqual(1.0, column_sum[0], 2)
+        self.assertAlmostEqual(0.333, column_sum[0], 2)
         self.assertAlmostEqual(1.0, column_sum[1], 2)
 
