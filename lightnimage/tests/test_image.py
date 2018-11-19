@@ -88,3 +88,140 @@ class TestLightningImage(TestCase):
         self.assertAlmostEqual(0.333, column_sum[0], 2)
         self.assertAlmostEqual(1.0, column_sum[1], 2)
 
+    def test_applying_function_on_image_that_returns_scalar(self):
+        """
+        Added 16.11.2018
+        @return:
+        """
+        # Defining a function, that returns the global sum of all elements
+        summation = 0
+
+        def add(array):
+            nonlocal summation
+            it = np.nditer(array)
+            while not it.finished:
+                summation += it[0]
+                it.iternext()
+            return array
+
+        # The array to test on
+        array = np.asarray([
+            [1, 2, 1],
+            [1, 1, 2]
+        ])
+        image = LightningImage(array)
+
+        # Applying the function
+        image.transform(add)
+        self.assertEqual(8, summation)
+
+    def test_applying_function_transformation_on_each_element(self):
+        """
+        Added 16.11.2018
+        @return:
+        """
+        def quadratic(value, index0, index1):
+            return value ** 2
+
+        # Creating the array to test on
+        array = np.asarray([
+            [1, 3],
+            [2, 5]
+        ])
+        image = LightningImage(array)
+
+        # Applying the function
+        image.transform_element_wise(quadratic)
+        # testing each element
+        expected = ([
+            [1, 9],
+            [4, 25]
+        ])
+        self.assertTrue((image.array == expected).all())
+
+    def test_applying_function_element_wise_with_outer_scope_variable(self):
+        """
+        Added 16.11.2018
+        @return:
+        """
+        summation = 0
+
+        def add(value, index0, index1):
+            nonlocal summation
+            summation += value
+            return value
+
+        # The array to test on
+        array = np.asarray([
+            [1, 2, 1],
+            [1, 1, 2]
+        ])
+        image = LightningImage(array)
+
+        # Applying the function
+        image.transform_element_wise(add)
+        self.assertEqual(8, summation)
+
+    def test_applying_function_masked_element_wise(self):
+        """
+        Added 16.11.2018
+        @return:
+        """
+        def quadratic(value, index0, index1):
+            return value ** 2
+
+        # Defining the array to test on, the mask to be used and the expected resulting array
+        array = np.asarray([
+            [1, 3, 5],
+            [6, 2, 1],
+            [3, 2, 4]
+        ])
+        mask = np.asarray([
+            [1, 1, 0],
+            [1, 0, 1],
+            [1, 0, 0]
+        ])
+        expected = np.asarray([
+            [1, 9, 5],
+            [36, 2, 1],
+            [9, 2, 4]
+        ])
+
+        # Applying the function on the array
+        image = LightningImage(array)
+        image.transform_masked(quadratic, mask)
+
+        self.assertTrue((expected == image.array).all())
+
+    def test_applying_function_masked_element_wise_with_additional_replace(self):
+        """
+        Added 16.11.2018
+        @return:
+        """
+        def quadratic(value, index0, index1):
+            return value ** 2
+
+        # Defining the array to test on, the mask to be used and the expected resulting array
+        array = np.asarray([
+            [1, 3, 5],
+            [6, 2, 1],
+            [3, 2, 4]
+        ])
+        mask = np.asarray([
+            [1, 1, 0],
+            [1, 0, 1],
+            [1, 0, 0]
+        ])
+        expected = np.asarray([
+            [1, 9, 0],
+            [36, 0, 1],
+            [9, 0, 0]
+        ])
+
+        # Applying the function on the array
+        image = LightningImage(array)
+        image.transform_masked(quadratic, mask, 0)
+
+        self.assertTrue((expected == image.array).all())
+
+

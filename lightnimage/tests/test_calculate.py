@@ -7,6 +7,10 @@ from lightnimage.calculate import average_2d, threshold_sequencing
 class TestAverageCalculations(TestCase):
 
     def test_2d_average_basically_working(self):
+        """
+        Added 16.11.2018
+        @return:
+        """
         array = np.asarray([
             [1, 2, 4],
             [4, 5, 2]
@@ -16,6 +20,10 @@ class TestAverageCalculations(TestCase):
         self.assertEqual(3, av)
 
     def test_2d_average_sub_area_works(self):
+        """
+        Added 16.11.2018
+        @return:
+        """
         array = np.asarray([
             [1, 2, 4, 5],
             [4, 5, 2, 9],
@@ -31,6 +39,10 @@ class TestAverageCalculations(TestCase):
 class TestSequencingCalculations(TestCase):
 
     def test_1d_threshold_sequencing(self):
+        """
+        Added 16.11.2016
+        @return:
+        """
         array = np.asarray([0, 1, 2, 4, 5, 4, 5, 9, 4, 3, 0])
         sequences = threshold_sequencing(array, 4)
         self.assertEqual(1, len(sequences))

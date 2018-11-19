@@ -36,20 +36,152 @@ class LightningImage:
             # If the input was another lightning image object it gets copied, which means
             # the original also gets copied
             self.array = copy.deepcopy(img.array)
-            self.original = copy.deepcopy(img.original)
+            #self.original = copy.deepcopy(img.original)
         else:
             self.array = copy.deepcopy(img)
-            self.original = copy.deepcopy(img)
+            #self.original = copy.deepcopy(img)
 
         # 06.11.2018
         # Saving the height and the width of the image and thus the dimensions of the array as well
         self.width = self.array.shape[1]
         self.height = self.array.shape[0]
 
+    def copy(self):
+        """
+        Returns a copy of the image object
+
+        CHANGELOG
+
+        Added 19.11.2018
+
+        @return: LightningImage
+        """
+        return LightningImage(copy.deepcopy(self.array))
+
+    def get_mask(self, threshold=128):
+        """
+        This method will return an array object with the same shape as the image. Based on a
+        threshold value this array will contain a 1 if the image value exceeds the threshold at that
+        index and a 0 otherwise, thus forming a "boolean" image mask
+
+        CHANGELOG
+
+        Added 19.11.2018
+
+        @param threshold:
+        @return:
+        """
+        # Creating a function, which will return 1 if the value of the element ist greater than the
+        # threshold and 0 otherwise.
+        # This function will be applied as a element wise transformation, thus creating a mask array
+        def threshold_mask(value, i, j):
+            if value > threshold:
+                return 1
+            else:
+                return 0
+
+        # The transformation is applied on a copy of image, so that the creation of the mask doesnt
+        # influence the array.
+        cpy = self.copy()
+        cpy.transform_element_wise(threshold_mask)
+        return cpy.array
+
+    def transform_masked(self, f, mask, replace=None):
+        """
+        Given a function and a mask, the function will be applied to each element, where the mask evaluates to True.
+
+        CHANGELOG
+
+        Added 16.11.2018
+
+        @param f:           The function to be applied to each element. has to return a float value between 0 and 255.
+                            Has to accept 3 arguments: the old element value, axis0 index, axis1 index
+        @param mask:        An array, that has exactly the same dimensions as the image to transform. Contains only
+                            0 and 1 (True and False). The given function will only be applied to elements at indices,
+                            where the mask element evaluates to True.
+        @param replace:     Optionally an int in the range between 0 and 255. Every pixel, that is not being masked will
+                            be replaced with this constant value in the transformed image.
+                            If it is None, the new image will have the same value as the old image in a unmasked element
+                            DEFAULT is None.
+        @return:
+        """
+        new = np.zeros(self.array.shape, np.uint8)
+        it = np.nditer(self.array, flags=['multi_index'])
+        it_new = np.nditer(new, op_flags=['writeonly'])
+        it_mask = np.nditer(mask)
+        while not it.finished:
+            # Only doing anything if the current pixel is masked
+            if it_mask[0]:
+                # Retrieving the value for the transformed array as the transformation of the current array element
+                it_new[0] = f(it[0], it.multi_index[0], it.multi_index[1])
+
+            else:
+                # In case there is a replace value given. All other elements, that are not masked are replaced by this
+                # constant value
+                if replace is not None:
+                    it_new[0] = replace
+                # Otherwise the value from the original matrix will be kept
+                else:
+                    it_new[0] = it[0]
+
+            # Iterating to the next element
+            it.iternext()
+            it_new.iternext()
+            it_mask.iternext()
+
+        # Switching to the new array
+        self.array = new
+
+    def transform_element_wise(self, f):
+        """
+        Given a function, this function will be applied to each element of the matrix.
+
+        CHANGELOG
+
+        Added 16.11.2018
+
+        @param f:   The function to be applied to the elements. Has to return a 8 bit integer. Has to accept 3
+                    arguments: The old element value, the axis0 index, the axis1 index
+        @return:
+        """
+        # Creating a new empty matrix with the same dimensions
+        new = np.zeros(self.array.shape, np.uint8)
+        it = np.nditer(self.array, flags=['multi_index'])
+        it_new = np.nditer(new, op_flags=['writeonly'])
+        while not it.finished:
+            # Retrieving the value for the transformed array as the transformation of the current array element
+            value = f(it[0], it.multi_index[0], it.multi_index[1])
+            # Setting the element of the new matrix
+            it_new[0] = value
+
+            # Incrementing the iterators
+            it.iternext()
+            it_new.iternext()
+
+        # Switching to the new array
+        self.array = new
+
+    def transform(self, f):
+        """
+        Takes a function that transforms a whole matrix and applies it on the image.
+
+        CHANGELOG
+
+        Added 16.11.2918
+
+        @param f:   The function to be used on the matrix. Has to accept 1 argument being the whole array, that
+                    describes the image. has to return an array object with the same dimensions and data type.
+        @return:
+        """
+        # The function creates a new two dimensional array.
+        # Creating a new Lightning image object from the transformation result
+        self.array = f(self.array)
+
     def darken(self, threshold, replace=0):
         """
         This method will select all the pixels with the grayscale value LOWER than the given threshold and replace them
         with the given fixed value 'replace'. The default to replace with is 0(dark), thus darkening the pixels
+
         CHANGELOG
 
         Added 04.11.2018
@@ -207,9 +339,9 @@ class LightningImage:
                 # Numpy arrays support multi indexing in a single bracket for higher dimensions and this is also the
                 # more efficient way
                 if axis:
-                    temp_sum += self.array[j, i] # lol
+                    temp_sum += self.array[j, i]
                 else:
-                    temp_sum += self.array[i, j] # lol
+                    temp_sum += self.array[i, j]
 
             sum_array[i] = temp_sum
 
@@ -241,3 +373,8 @@ class LightningImage:
         # The pure subtraction is just a special case of the general difference function, but without the whole noise
         # replacement function
         return self.difference(other, threshold=0)
+
+
+# ALL THE FUNCTIONS THAT CAN BE APPLIED ON THE IMAGE OBJECT
+# IMAGE TRANSFORMATIONS
+
