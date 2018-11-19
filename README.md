@@ -30,3 +30,8 @@ initial version
     - Added a tool which will plot the basic image detection. Drawing red boxes 
     around the areas where a lightning was found and a label, which contains the guess 
     whether it was a cloud to ground or a cloud to cloud lightning
+    
+### 0.0.0.10 - 19.11.2018
+
+- tools
+    - Fixed bug with saving the figure as file

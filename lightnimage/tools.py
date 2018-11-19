@@ -73,7 +73,7 @@ def plot_lightning_detection_overview(image, ref_image):
     plt.show()
 
 
-def plot_simple_lightning_detection(image, ref_image, save_path=None, file_name=None):
+def plot_simple_lightning_detection(image, ref_image, save_path=None, file_name=None, is_showing=True):
     """
     This function will plot the original pictures and the areas, where the lightnings were detected as
     an overlay of red boxes. Besides the red boxes will be the label, of what the program guesses the
@@ -90,10 +90,14 @@ def plot_simple_lightning_detection(image, ref_image, save_path=None, file_name=
 
     Added 19.11.2018
 
+    Changed 19.11.2018
+    Fixed bug, where the plot image couldnt be saved
+
     @param LightningImage image:
     @param LightningImage ref_image:
     @param str save_path:
     @param str file_name:
+    @param bool is_showing:
     @return: List(Tuple(str, Tuple(Tuple(int, int), Tuple(int, int))))
     """
     # Creating the sub plots
@@ -149,12 +153,19 @@ def plot_simple_lightning_detection(image, ref_image, save_path=None, file_name=
         # plotting the text
         ax.text(start[0], start[1] - 14, guess, size=7, color='r')
 
-    plt.show()
-
     if save_path is not None:
 
         # In case a file name is given it will be used
         if file_name is not None:
-            file_path = "{}\\{}.png".format(save_path, file_name)
+            # 19.11.2018
+            # Changed the image type to SVG and changed the method for creating the path from simple
+            # string manipulation to path.join function
+            file_name_extended = "{}.svg".format(file_name)
+            file_path = os.path.join(save_path, file_name_extended)
             print('Saving as "{}"'.format(file_path))
-            plt.savefig(file_path)
+            plt.savefig(file_path, dpi=600)
+
+    # 19.11.2018
+    # Added a flag as parameter, whith which the actual display of the plot can be toggled
+    if is_showing:
+        plt.show()
