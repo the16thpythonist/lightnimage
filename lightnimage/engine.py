@@ -1,14 +1,17 @@
 # 16.11.2018
+# Standard library
 # Python 2 compatibility for the print function syntax
 from __future__ import print_function
+import math
 
+# third party
+import numpy as np
+from pprint import pprint
+
+# local package
 from lightnimage.image import LightningImage
-
 from lightnimage.calculate import *
 
-import numpy as np
-
-from pprint import pprint
 
 # ABSTRACT BASE CLASSES #
 
@@ -164,3 +167,122 @@ class SimpleAreaSegmentationEngine(AbstractAreaSegmentationEngine):
             return result
 
         return areas
+
+
+class SimpleAreaGroupingEngine:
+
+    DEFAULT_CONFIG = {
+        'weight_function':  lambda d, s: d * s,
+        'threshold':        10**4
+    }
+
+    def __init__(self, config):
+        """
+        The constructor
+
+        The config dict can have the following parameters:
+        - weight_function:  This is a callable object, which will expect two parameters, the first one being the
+                            the distance between two areas and the second one being their combined size (added up).
+                            The function has to return a value which will then be compared to the given threshold
+        - threshold:        The value which will be compared with the result of the weight function, that has been
+                            computed from the pair of two areas.
+                            Is the weight smalled than the threshold, the two areas are grouped, otherwise not
+        CHANGELOG
+
+        Added 05.12.2018
+
+        :param config:
+        """
+        self.config = self.DEFAULT_CONFIG.copy()
+        self.config.update(config)
+
+    def __call__(self, areas):
+
+        # First we need to decide which areas will be put in a group with each other. This we will do, by computing
+        # Whether to group for each pair:
+        groups = self.group_areas(areas)
+        combined_areas = []
+        for group in groups:
+            combined_area = self.combine_areas(group)
+            combined_areas.append(combined_area)
+
+        return combined_areas
+
+    def group_areas(self, areas):
+        group_membership = dict.fromkeys(areas, [])
+
+        for i in range(len(areas)):
+
+            for j in range(i + 1, len(areas)):
+                area_i = areas[i]
+                area_j = areas[j]
+
+                # Calculating the distance and the size and using that as parameters to the weight function
+                distance = self.area_distance(area_i, area_j)
+                size = self.area_size(area_j) + self.area_size(area_j)
+                weight = self.config['weight_function'](distance, size)
+
+                if weight < self.config['threshold']:
+                    group = group_membership[area_j] + group_membership[area_i] + [area_i, area_j]
+                    # removing duplicates from that list
+                    group = list(set(group))
+                    group_membership[area_j] = group
+                    group_membership[area_i] = group
+
+                else:
+                    group_membership[area_i].append(area_i)
+                    group_membership[area_j].append(area_j)
+
+        groups = []
+        for group in list(group_membership.values()):
+            if group not in groups:
+                groups.append(group)
+
+        return groups
+
+    @staticmethod
+    def combine_areas(areas):
+
+        x_min = math.inf
+        x_max = 0
+        y_min = math.inf
+        y_max = 0
+
+        for area in areas:
+            x_start = area[0][0]
+            y_start = area[1][0]
+
+            x_end = x_start + (area[0][1] - area[0][0])
+            y_end = y_start + (area[1][1] - area[1][0])
+
+            if x_start < x_min:
+                x_min = x_start
+            if y_start < y_min:
+                y_min = y_start
+            if x_end > x_max:
+                x_max = x_end
+            if y_end > y_max:
+                y_max = y_end
+
+        return (x_min, x_max), (y_min, y_max)
+
+    @staticmethod
+    def area_size(area):
+        width = area[0][1] - area[0][0]
+        height = area[1][1] - area[1][0]
+        return width * height
+
+    @staticmethod
+    def area_distance(area1, area2):
+        # First we need the center point of each area
+        area1_center = SimpleAreaGroupingEngine.area_center(area1)
+        area2_center = SimpleAreaGroupingEngine.area_center(area2)
+
+        # Calculating the distance between two 2 dimensional points
+        distance = math.sqrt((area1_center[0] - area2_center[0])**2 + (area1_center[1] - area2_center[1])**2)
+        return distance
+
+    @staticmethod
+    def area_center(area):
+        center = (area[0][0] + (area[0][1] - area[0][0]) / 2, area[1][0] + (area[1][1] - area[1][0]) / 2)
+        return center

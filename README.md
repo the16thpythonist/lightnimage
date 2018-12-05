@@ -35,3 +35,8 @@ initial version
 
 - tools
     - Fixed bug with saving the figure as file
+    
+### 0.0.0.11 - 05.12.2018
+
+- Added a jupyter notebook, which illustrates the detection process
+- Added the grouping engine, which will group some detected areas together
