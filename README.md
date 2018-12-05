@@ -40,3 +40,7 @@ initial version
 
 - Added a jupyter notebook, which illustrates the detection process
 - Added the grouping engine, which will group some detected areas together
+
+### 0.0.0.12 - 05.12.2018
+
+- Minor bug fix in the grouping engine

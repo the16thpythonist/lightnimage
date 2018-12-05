@@ -17,6 +17,16 @@ class TestSimpleAreaGroupingEngine(TestCase):
         groups = engine.group_areas(areas)  # type: dict
         self.assertListEqual(sorted(areas), sorted(groups[0]))
 
+        # Creating areas with really large proportions, so that they do not get grouped for sure
+        areas = [
+            ((100, 1000), (100, 10000)),
+            ((100000, 10000000), (100000000, 10000000000000))
+        ]
+
+        engine = SimpleAreaGroupingEngine({})
+        combined_areas = engine(areas)
+        self.assertListEqual(sorted(areas), sorted(combined_areas))
+
     def test_area_size_calculated_correctly(self):
         area = ((0, 10), (0, 5))
         size = SimpleAreaGroupingEngine.area_size(area)

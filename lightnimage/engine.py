@@ -3,6 +3,7 @@
 # Python 2 compatibility for the print function syntax
 from __future__ import print_function
 import math
+from collections import defaultdict
 
 # third party
 import numpy as np
@@ -172,8 +173,8 @@ class SimpleAreaSegmentationEngine(AbstractAreaSegmentationEngine):
 class SimpleAreaGroupingEngine:
 
     DEFAULT_CONFIG = {
-        'weight_function':  lambda d, s: d * s,
-        'threshold':        10**4
+        'weight_function': lambda d, s: d * s,
+        'threshold':       10**4
     }
 
     def __init__(self, config):
@@ -209,7 +210,7 @@ class SimpleAreaGroupingEngine:
         return combined_areas
 
     def group_areas(self, areas):
-        group_membership = dict.fromkeys(areas, [])
+        group_membership = defaultdict(list)
 
         for i in range(len(areas)):
 
