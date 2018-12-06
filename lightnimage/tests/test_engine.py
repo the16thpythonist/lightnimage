@@ -6,6 +6,12 @@ from lightnimage.engine import SimpleAreaGroupingEngine
 
 class TestSimpleAreaGroupingEngine(TestCase):
 
+    def test_area_grouping_engine_single_area(self):
+        areas = [((0, 0), (1, 1))]
+        engine = SimpleAreaGroupingEngine({})
+        grouped_areas = engine(areas)
+        self.assertListEqual(areas, grouped_areas)
+
     def test_area_grouping_basically_correct(self):
         # Creating two areas, that are insanely small and really close, so they have to be grouped
         areas = [

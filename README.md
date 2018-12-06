@@ -44,3 +44,9 @@ initial version
 ### 0.0.0.12 - 05.12.2018
 
 - Minor bug fix in the grouping engine
+
+### 0.0.0.13 - 06.12.2018
+
+- Added documentation for the grouping engine class
+- Fixed an error in the grouping engine where the edge case of a single area would return an empty list
+- Extended the detection demo notebook

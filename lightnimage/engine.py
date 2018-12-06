@@ -171,9 +171,30 @@ class SimpleAreaSegmentationEngine(AbstractAreaSegmentationEngine):
 
 
 class SimpleAreaGroupingEngine:
+    """
+    The problem:
+    When processing the lightnings with the SimpleAreaSegmentationEngine, it can happen, that at one point the
+    the lightning is more dim in brightness and thus it gets detected as two separate lightnings. But in some cases it
+    would be better to have it detected as a whole.
 
+    This is what this engine does. Bases on a weight function and a threshold, it computes for each pair of areas on
+    the whole picture, whether it is reasonable to believe, that they belong to a single lightning or not.
+
+    CHANGELOG
+
+    Added 05.12.2018
+    """
+
+    """
+    CHANGELOG
+    
+    Added 05.12.2018
+    
+    Changed 06.12.2018
+    Changed the default formula for computation to from "d * s" to "d + math.sqrt(s)"
+    """
     DEFAULT_CONFIG = {
-        'weight_function': lambda d, s: d * s,
+        'weight_function': lambda d, s: d + math.sqrt(s),
         'threshold':       10**4
     }
 
@@ -198,7 +219,18 @@ class SimpleAreaGroupingEngine:
         self.config.update(config)
 
     def __call__(self, areas):
+        """
+        Given a list of areas, this engine will return another list of areas, with the same amount or less areas, where
+        some of the original areas have been grouped together by the rules of the engine configuration. These grouped
+        areas are the combined into one bigger area, which spans over all the original areas.
 
+        CHANGELOG
+
+        Added 05.12.2018
+
+        :param areas: A list of all the areas of a lightning detection
+        :return: List()
+        """
         # First we need to decide which areas will be put in a group with each other. This we will do, by computing
         # Whether to group for each pair:
         groups = self.group_areas(areas)
@@ -210,7 +242,25 @@ class SimpleAreaGroupingEngine:
         return combined_areas
 
     def group_areas(self, areas):
+        """
+        Given a list of areas, this function computes which areas belong to one group, following the rules given by
+        the weight function and the threshold of the engine configuration. A list of lists will be returned, where each
+        sub list contains all the areas belonging to one group
+
+        CHANGELOG
+
+        Added 05.12.2018
+
+        :param areas:
+        :return: List(List(Tuple(Tuple(int, int), Tuple(int, int))))
+        """
         group_membership = defaultdict(list)
+
+        # 06.12.2018
+        # This is an edge case I haven't previously thought about: When there is only one area the loop down
+        # blow does not even get executed properly, which leads to an empty list being returned
+        if len(areas) == 1:
+            return [areas]
 
         for i in range(len(areas)):
 
@@ -243,7 +293,16 @@ class SimpleAreaGroupingEngine:
 
     @staticmethod
     def combine_areas(areas):
+        """
+        Given a list of areas, this function will compute a new area, which will include all the given areas.
 
+        CHANGELOG
+
+        Added 05.12.2018
+
+        :param areas:   A list of all the areas to be combined into one big area
+        :return: area
+        """
         x_min = math.inf
         x_max = 0
         y_min = math.inf
@@ -269,12 +328,35 @@ class SimpleAreaGroupingEngine:
 
     @staticmethod
     def area_size(area):
+        """
+        Returns the size of the area, by multiplying width and height.
+
+        CHANGELOG
+
+        Added 05.12.2018
+
+        :param Tuple(Tuple(int,int)) area:  THe tuple describing the two dimensional are in a x y plane
+        :return:  int
+        """
         width = area[0][1] - area[0][0]
         height = area[1][1] - area[1][0]
         return width * height
 
     @staticmethod
     def area_distance(area1, area2):
+        """
+        Calculates the distance between two given areas (Obviously they have to be in the same coordinate system).
+        The distance is calculated between the centers of the areas!
+        Returns the float distance value
+
+        CHANGELOG
+
+        Added 05.12.2018
+
+        :param area1:
+        :param area2:
+        :return: float
+        """
         # First we need the center point of each area
         area1_center = SimpleAreaGroupingEngine.area_center(area1)
         area2_center = SimpleAreaGroupingEngine.area_center(area2)
@@ -285,5 +367,16 @@ class SimpleAreaGroupingEngine:
 
     @staticmethod
     def area_center(area):
+        """
+        Calculates the center point of a given area tuple. The center will be returned as a tuple of two FLOAT
+        values, the first element being the x coordinate and the second the y coordinate.
+
+        CHANGELOG
+
+        Added 05.12.2018
+
+        :param Tuple(Tuple(int,int)) area:  THe tuple describing the two dimensional are in a x y plane
+        :return: Tuple(int, int)
+        """
         center = (area[0][0] + (area[0][1] - area[0][0]) / 2, area[1][0] + (area[1][1] - area[1][0]) / 2)
         return center
