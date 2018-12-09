@@ -170,6 +170,123 @@ class SimpleAreaSegmentationEngine(AbstractAreaSegmentationEngine):
         return areas
 
 
+class CustomSequenceAreaSegmentationEngine(AbstractAreaSegmentationEngine):
+    """
+    CHANGELOG
+
+    Added 06.12.2018
+    """
+    DEFAULT_CONFIG = {
+        'sequence_function': lambda a: CustomSequenceAreaSegmentationEngine.default_sequence_function(a),
+        'checking':             True,
+        'check_threshold':   0.03
+    }
+
+    def __init__(self, config):
+        """
+        The constructor.
+
+        CHANGELOG
+
+        Added 06.12.2018
+        :param config:
+        """
+        AbstractAreaSegmentationEngine.__init__(self, config)
+        self.config = self.DEFAULT_CONFIG.copy()
+        self.config.update(config)
+
+    def __call__(self, lightning_image):
+        """
+        CHANGELOG
+
+        Added 06.12.2018
+
+        :param lightning_image:
+        :return:
+        """
+        # Calculating the row and column sums of the grayscale values along the axes of the picture, because the SIMPLE
+        # strategy is to detect areas of anomalies by using only these two axes.
+        x_sums = lightning_image.row_sum()
+        y_sums = lightning_image.column_sum()
+
+        # The sequences are calculated by using the
+        x_sequences = self.config['sequence_function'](x_sums)
+        y_sequences = self.config['sequence_function'](y_sums)
+
+        areas = combinations_2d(x_sequences, y_sequences)
+
+        if self.config['checking']:
+            # Creating areas only from all the possible combinations of two axis's sub sequences also creates a lot
+            # of false areas.
+            # Here we go through all the areas and essentially compute the average amount of signal within them. Areas
+            # are only part of the final solution, if the average within them surpasses a certain threshold
+            result = []
+            for area in areas:
+                # Calculating the average within these areas and only using these that contain a high enough value
+                av = average_2d(lightning_image.array, area)
+                # print("Checking {} with average {}".format(str(area), av))
+                if (av / 255) >= self.config['check_threshold']:
+                    result.append(area)
+            return result
+
+        return areas
+
+    @staticmethod
+    def default_sequence_function(array):
+        """
+        CHANGELOG
+
+        Added 06.12.2018
+
+        :param array:
+        :return:
+        """
+        array_max = np.amax(array)
+        return CustomSequenceAreaSegmentationEngine.sequence_function_generator(
+            lambda i, v, a: v >= array_max * 0.3,
+            lambda i, v, a: v < array_max * 0.3
+        )(array)
+
+    @staticmethod
+    def sequence_function_generator(start_filter_function, stop_filter_function):
+        """
+        CHANGELOG
+
+        Added 06.12.2018
+
+        :param start_filter_function:
+        :param stop_filter_function:
+        :return:
+        """
+
+        def sequence_function(array):
+            sequences = []
+
+            sequence_start = None
+            it = np.nditer(array, flags=['multi_index'])
+            while not it.finished:
+
+                if sequence_start is None:
+                    # This means no value was bigger than the threshold yet, so no sequence has started
+                    # We are only searching for a value bigger than the threshold.
+                    if start_filter_function(it.multi_index[0], it[0], array):
+                        sequence_start = it.multi_index[0]
+
+                else:
+                    # This means we are in the middle of a sequence. When we find a single value
+                    # that is smaller than the threshold, the sequence ends
+                    if stop_filter_function(it.multi_index[0], it[0], array):
+                        # Saving the sequence with the end being the current index
+                        sequences.append((sequence_start, it.multi_index[0]))
+                        sequence_start = None
+
+                it.iternext()
+
+            return sequences
+
+        return sequence_function
+
+
 class SimpleAreaGroupingEngine:
     """
     The problem:
@@ -228,6 +345,9 @@ class SimpleAreaGroupingEngine:
 
         Added 05.12.2018
 
+        Changed 06.12.2018
+        Added another duplicate removal at the end, before the return
+
         :param areas: A list of all the areas of a lightning detection
         :return: List()
         """
@@ -238,6 +358,11 @@ class SimpleAreaGroupingEngine:
         for group in groups:
             combined_area = self.combine_areas(group)
             combined_areas.append(combined_area)
+
+        # 06.12.2018
+        # Here we are again removing duplicates, since I have been experiencing real issues with duplicates returned
+        # by the grouping engine
+        combined_areas = list(set(combined_areas))
 
         return combined_areas
 
@@ -380,3 +505,61 @@ class SimpleAreaGroupingEngine:
         """
         center = (area[0][0] + (area[0][1] - area[0][0]) / 2, area[1][0] + (area[1][1] - area[1][0]) / 2)
         return center
+
+
+class SimpleLightningPreprocessingEngine:
+    """
+
+    CHANGELOG
+
+    Added 06.12.2018
+    """
+
+    DEFAULT_CONFIG = {
+        'threshold_function': lambda m, a: m - m * (0.5 + 0.0002 * (255 - m - a)),
+        'static_threshold': 40
+    }
+
+    def __init__(self, config):
+        """
+        The constructor.
+
+        CHANGELOG
+
+        Added 06.12.2018
+
+        :param dict config:
+        """
+        self.config = self.DEFAULT_CONFIG.copy()
+        self.config.update(config)
+
+    def __call__(self, lightning_image):
+        """
+        CHANGELOG
+
+        Added 06.12.2018
+
+        :param LightningImage lightning_image:
+        :return:
+        """
+        # Calculating the max and the mean of the image as they will be the arguments to the function, that calculates
+        # the dynamic threshold
+        image_max = np.amax(lightning_image.array)
+        image_mean = np.mean(lightning_image.array)
+
+        # Calculating the threshold by using the given function
+        dynamic_threshold = self.config['threshold_function'](
+            image_max,
+            image_mean
+        )
+        static_threshold = self.config['static_threshold']
+        threshold = max(dynamic_threshold, static_threshold)
+        # print(threshold)
+
+        # The binary, separated function is now computed by turning everything below the threshold into pure black
+        # and everything above into pure white.
+        separated_lightning_image = lightning_image.copy()  # type: LightningImage
+        separated_lightning_image.lighten(threshold)
+        separated_lightning_image.darken(threshold - 1)
+
+        return separated_lightning_image

@@ -50,3 +50,15 @@ initial version
 - Added documentation for the grouping engine class
 - Fixed an error in the grouping engine where the edge case of a single area would return an empty list
 - Extended the detection demo notebook
+
+### 0.0.0.14
+
+- Added "SimpleLightningPreprocessingEngine": An engine for usage in preprocessing images before finding the 
+areas. Separates the given image into pure black and pure white, by using the mean and max of the image as parameters 
+to a callback function (given through the engine config) to calculate a dynamic threshold on which to separate white 
+and black
+- Added "CustomSequenceAreaSegmentationEngine": Allows to extract areas of Lighting from an image, by extraction 
+sequences from the row and column sums of the images axes and then building all possible combinations from those to get 
+2D areas. The callback function that calculates the sequences can be passed as engine config.
+- Added function "draw_areas" to utils, which will draw the given areas onto a given plot
+- Fixed a duplicate bug in the grouping engine
